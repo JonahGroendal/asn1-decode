@@ -1,0 +1,29 @@
+{
+  "name": "asn1-decode",
+  "version": "1.0.0",
+  "description": "Solidity functions for traversing an ASN1-encoded data structure",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "truffle test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JonahGroendal/asn1-decode.git"
+  },
+  "keywords": [
+    "asn1",
+    "decoder",
+    "Solidity"
+  ],
+  "author": "Jonah Groendal",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/JonahGroendal/asn1-decode/issues"
+  },
+  "homepage": "https://github.com/JonahGroendal/asn1-decode#readme",
+  "devDependencies": {
+    "truffle": "^4.1.14"
+  }
+}

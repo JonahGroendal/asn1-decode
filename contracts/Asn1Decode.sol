@@ -1,16 +1,16 @@
 pragma solidity  ^0.4.23;
 
 library NodePtr {
-  function ixs(uint self) public pure returns (uint) {
+  function ixs(uint self) internal pure returns (uint) {
     return uint80(self);
   }
-  function ixf(uint self) public pure returns (uint) {
+  function ixf(uint self) internal pure returns (uint) {
     return uint80(self>>80);
   }
-  function ixl(uint self) public pure returns (uint) {
+  function ixl(uint self) internal pure returns (uint) {
     return uint80(self>>160);
   }
-  function getPtr(uint _ixs, uint _ixf, uint _ixl) public pure returns (uint) {
+  function getPtr(uint _ixs, uint _ixf, uint _ixl) internal pure returns (uint) {
     _ixs |= _ixf<<80;
     _ixs |= _ixl<<160;
     return _ixs;

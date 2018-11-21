@@ -1,22 +1,32 @@
 pragma solidity  ^0.4.23;
-pragma experimental ABIEncoderV2;
 
-contract Asn1Decode {
-  /*
-   * Points to a node in a der-encoded asn1 sturture (which is a bytes array)
-   */
-  struct NodePtr {
-    uint ixs; // first byte index
-    uint ixf; // first content byte index
-    uint ixl; // last content byte index
+library NodePtr {
+  function ixs(uint self) public pure returns (uint) {
+    return uint80(self);
   }
+  function ixf(uint self) public pure returns (uint) {
+    return uint80(self>>80);
+  }
+  function ixl(uint self) public pure returns (uint) {
+    return uint80(self>>160);
+  }
+  function getPtr(uint _ixs, uint _ixf, uint _ixl) public pure returns (uint) {
+    _ixs |= _ixf<<80;
+    _ixs |= _ixl<<160;
+    return _ixs;
+  }
+}
+
+library Asn1Decode {
+  using NodePtr for uint;
+
   /*
    * First step in traversing an asn1 structure
    *
    * @param der The der-encoded asn1 structure
    * @return a NodePtr object pointing to the outermost node
    */
-  function nodeRoot(bytes der) public pure returns (NodePtr) {
+  function root(bytes der) public pure returns (uint) {
   	return asn1_read_length(der, 0);
   }
 
@@ -27,8 +37,8 @@ contract Asn1Decode {
    * @param n The current node
    * @return a NodePtr object pointing to the next sibling node
    */
-  function nodeNext(bytes der, NodePtr n) public pure returns (NodePtr) {
-  	return asn1_read_length(der, n.ixl+1);
+  function next(uint self, bytes der) public pure returns (uint) {
+  	return asn1_read_length(der, self.ixl()+1);
   }
 
   /*
@@ -38,10 +48,10 @@ contract Asn1Decode {
    * @param n The current node
    * @return a NodePtr object pointing to the next sibling node
    */
-  function nodeFirstChild(bytes der, NodePtr n) public pure returns (NodePtr) {
+  function firstChild(uint self, bytes der) public pure returns (uint) {
     // Can only open constructed types
-  	require(der[n.ixs] & 0x20 == 0x20);
-  	return asn1_read_length(der, n.ixf);
+  	require(der[self.ixs()] & 0x20 == 0x20);
+  	return asn1_read_length(der, self.ixf());
   }
 
   /*
@@ -52,22 +62,22 @@ contract Asn1Decode {
    * @param j Pointer to another asn1 node of the same asn1 structure
    * @return weather i or j is the direct child of the other.
    */
-  function nodeIsChildOf(NodePtr i, NodePtr j) public pure returns (bool) {
-  	return ( ((i.ixf <= j.ixs) && (j.ixl <= i.ixl)) ||
-             ((j.ixf <= i.ixs) && (i.ixl <= j.ixl)) );
+  function isChildOf(uint i/*aka self*/, uint j) public pure returns (bool) {
+  	return ( ((i.ixf() <= j.ixs()) && (j.ixl() <= i.ixl())) ||
+             ((j.ixf() <= i.ixs()) && (i.ixl() <= j.ixl())) );
   }
   /*
-   * @dev Traverses a der-encoded chunk of bytes by repeatedly using nodeNext and
-   * nodeFirstChild in an alternating fashion.
+   * @dev Traverses a der-encoded chunk of bytes by repeatedly using next() and
+   * firstChild() in an alternating fashion.
    *
    * @param der The der-encoded asn1 structure to traverse
    * @param location The encoded traversal instructions
-   *    - every even-index byte performes a nodeNext() operation a number of
+   *    - every even-index byte performes a next() operation a number of
           times equal to its value
-   *    - every odd-index byte performs a nodeFirstChild() operation a number of
+   *    - every odd-index byte performs a firstChild() operation a number of
           times equal to its value
-   *    ex: \x00\x02\x01 performs nodeRoot() then  (0 x nodeNext()) then
-          (2 x nodeFirstChild()) then (1 x nodeNext())
+   *    ex: \x00\x02\x01 performs root() then  (0 x next()) then
+          (2 x firstChild()) then (1 x next())
    *
    *  @return a NodePtr struct pointing to the index of the node traversed to
    */
@@ -77,43 +87,43 @@ contract Asn1Decode {
    bytes constant public LOCATION_VALID_NOT_BEFORE = '\x00\x02\x04\x01';
    bytes constant public LOCATION_VALID_NOT_AFTER = '\x00\x02\x04\x01\x01';
    bytes constant public LOCATION_PUB_KEY = '\x00\x02\x06';
-  function nodeTraverse(bytes der, bytes location) public pure returns (NodePtr) {
-    NodePtr memory i;
+  function traverse(bytes der, bytes location) public pure returns (uint) {
+    uint node;
     uint8 j;
     uint8 k;
 
-    i = nodeRoot(der);
+    node = root(der);
     for (j=0; j<location.length; j++) {
       if (j % 2 == 0) {
         for (k=0; k<uint8(location[j]); k++) {
-          i = nodeNext(der, i);
+          node = next(node, der);
         }
       } else {
         for (k=0; k<uint8(location[j]); k++) {
-          i = nodeFirstChild(der, i);
+          node = firstChild(node, der);
         }
       }
     }
 
-    return i;
+    return node;
   }
 
   // Get the value of the node
-  function getValue(bytes der, NodePtr n) public pure returns (bytes) {
-    uint valueLength = n.ixl + 1 - n.ixf;
+  function getValue(uint self, bytes der) public pure returns (bytes) {
+    uint valueLength = self.ixl() + 1 - self.ixf();
     bytes memory ret = new bytes(valueLength);                 // currently there cannot be dynamic arrays in memory. This will need to be changed next protocol update
     for (uint i=0; i<valueLength; i++) {
-      ret[i] = der[n.ixf + i];
+      ret[i] = der[self.ixf() + i];
     }
   	return ret;
   }
 
   // Get the entire node
-  function getAll(bytes der, NodePtr n) public pure returns (bytes) {
-    uint valueLength = n.ixl + 1 - n.ixs;
+  function getAll(uint self, bytes der) public pure returns (bytes) {
+    uint valueLength = self.ixl() + 1 - self.ixs();
     bytes memory ret = new bytes(valueLength);                 // currently there cannot be dynamic arrays in memory. This will need to be changed next protocol update
     for (uint i=0; i<valueLength; i++) {
-      ret[i] = der[n.ixs + i];
+      ret[i] = der[self.ixs() + i];
     }
   	return ret;
   }
@@ -139,7 +149,7 @@ contract Asn1Decode {
   }
 
   // helper func
-  function asn1_read_length(bytes der, uint ix) private pure returns (NodePtr) {
+  function asn1_read_length(bytes der, uint ix) private pure returns (uint) {
   	uint first = uint(der[ix+1]);
     uint length;
     uint ix_first_content_byte;
@@ -158,6 +168,6 @@ contract Asn1Decode {
   		ix_first_content_byte = ix+2+lengthbytesLength;
   		ix_last_content_byte = ix_first_content_byte + length -1;
     } // -----------------------------------------------------------------------
-  	return NodePtr({ixs: ix, ixf: ix_first_content_byte, ixl: ix_last_content_byte});
+    return NodePtr.getPtr(ix, ix_first_content_byte, ix_last_content_byte);
   }
 }

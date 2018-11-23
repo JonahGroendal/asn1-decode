@@ -1,5 +1,7 @@
 pragma solidity  ^0.4.23;
 
+import "./BytesUtil.sol";
+
 library NodePtr {
   // Unpack first byte index
   function ixs(uint self) internal pure returns (uint) {
@@ -23,13 +25,14 @@ library NodePtr {
 
 library Asn1Decode {
   using NodePtr for uint;
+  using BytesUtil for bytes;
 
   /*
    * @dev Get the root node. First step in traversing an asn1 structure
    * @param der The der-encoded asn1 structure
    * @return a NodePtr object pointing to the outermost node
    */
-  function root(bytes der) public pure returns (uint) {
+  function root(bytes der) internal pure returns (uint) {
   	return asn1_read_length(der, 0);
   }
 
@@ -39,7 +42,7 @@ library Asn1Decode {
    * @param ptr Points to the indices of the current node
    * @return a NodePtr object pointing to the next sibling node
    */
-  function nextSiblingOf(bytes der, uint ptr) public pure returns (uint) {
+  function nextSiblingOf(bytes der, uint ptr) internal pure returns (uint) {
   	return asn1_read_length(der, ptr.ixl()+1);
   }
 
@@ -49,7 +52,7 @@ library Asn1Decode {
    * @param ptr Points to the indices of the current node
    * @return a NodePtr object pointing to the first child node
    */
-  function firstChildOf(bytes der, uint ptr) public pure returns (uint) {
+  function firstChildOf(bytes der, uint ptr) internal pure returns (uint) {
     // Can only open constructed types
   	require(der[ptr.ixs()] & 0x20 == 0x20);
   	return asn1_read_length(der, ptr.ixf());
@@ -63,7 +66,7 @@ library Asn1Decode {
    * @param j Pointer to another asn1 node of the same asn1 structure
    * @return Whether i or j is the direct child of the other.
    */
-  function isChildOf(uint i/*aka self*/, uint j) public pure returns (bool) {
+  function isChildOf(uint i/*aka self*/, uint j) internal pure returns (bool) {
   	return ( ((i.ixf() <= j.ixs()) && (j.ixl() <= i.ixl())) ||
              ((j.ixf() <= i.ixs()) && (i.ixl() <= j.ixl())) );
   }
@@ -82,13 +85,13 @@ library Asn1Decode {
    *
    *  @return a NodePtr struct pointing to the index of the node traversed to
    */
-   bytes constant public COMMON_NAME = "\x55\x04\x03";
+   bytes constant internal COMMON_NAME = "\x55\x04\x03";
    // shortcuts to commonly used X509 nodes
-   bytes constant public LOCATION_SERIAL_NUMBER = '\x00\x02\x01';
-   bytes constant public LOCATION_VALID_NOT_BEFORE = '\x00\x02\x04\x01';
-   bytes constant public LOCATION_VALID_NOT_AFTER = '\x00\x02\x04\x01\x01';
-   bytes constant public LOCATION_PUB_KEY = '\x00\x02\x06';
-  function traverseTo(bytes der, bytes location) public pure returns (uint) {
+   bytes constant internal LOCATION_SERIAL_NUMBER = '\x00\x02\x01';
+   bytes constant internal LOCATION_VALID_NOT_BEFORE = '\x00\x02\x04\x01';
+   bytes constant internal LOCATION_VALID_NOT_AFTER = '\x00\x02\x04\x01\x01';
+   bytes constant internal LOCATION_PUB_KEY = '\x00\x02\x06';
+  function traverseTo(bytes der, bytes location) internal pure returns (uint) {
     uint ptr;
     uint8 j;
     uint8 k;
@@ -114,13 +117,14 @@ library Asn1Decode {
    * @param ptr Points to the indices of the current node
    * @return value bytes of node
    */
-  function bytesAt(bytes der, uint ptr) public pure returns (bytes) {
+  function bytesAt(bytes der, uint ptr) internal pure returns (bytes) {
     uint valueLength = ptr.ixl() + 1 - ptr.ixf();
-    bytes memory ret = new bytes(valueLength);                 // currently there cannot be dynamic arrays in memory. This will need to be changed next protocol update
+    return der.substring(ptr.ixf(), valueLength);
+    /* bytes memory ret = new bytes(valueLength);                 // currently there cannot be dynamic arrays in memory. This will need to be changed next protocol update
     for (uint i=0; i<valueLength; i++) {
       ret[i] = der[ptr.ixf() + i];
     }
-  	return ret;
+  	return ret; */
   }
 
   /*
@@ -129,20 +133,21 @@ library Asn1Decode {
    * @param ptr Points to the indices of the current node
    * @return bytes of node
    */
-  function allBytesAt(bytes der, uint ptr) public pure returns (bytes) {
+  function allBytesAt(bytes der, uint ptr) internal pure returns (bytes) {
     uint valueLength = ptr.ixl() + 1 - ptr.ixs();
-    bytes memory ret = new bytes(valueLength);                 // currently there cannot be dynamic arrays in memory. This will need to be changed next protocol update
+    return der.substring(ptr.ixs(), valueLength);
+    /* bytes memory ret = new bytes(valueLength);                 // currently there cannot be dynamic arrays in memory. This will need to be changed next protocol update
     for (uint i=0; i<valueLength; i++) {
       ret[i] = der[ptr.ixs() + i];
     }
-  	return ret;
+  	return ret; */
   }
 
-  function uintAt(bytes der, uint ptr) public pure returns (uint) {
+  function uintAt(bytes der, uint ptr) internal pure returns (uint) {
     return decodeUint(bytesAt(der, ptr));
   }
 
-  function decodeBitstring(bytes bitstr) public pure returns (bytes) {
+  /* function decodeBitstring(bytes bitstr) internal pure returns (bytes) {
     // Only 00 padded bitstr can be converted to bytestr!
   	require(bitstr[0] == 0x00);
   	bytes memory ret = new bytes(bitstr.length-1);
@@ -150,10 +155,19 @@ library Asn1Decode {
       ret[i] = bitstr[i+1];
     }
   	return ret;
+  } */
+
+  function bitstringAt(bytes der, uint ptr) internal pure returns (bytes) {
+    uint valueLength = ptr.ixl() + 1 - ptr.ixf();
+    return der.substring(ptr.ixf()+1, valueLength-1);
   }
 
+  /* function decodeBitstring(bytes bitstr) internal pure returns (bytes) {
+    return bitstr.substring(1, bitstr.length-1);
+  } */
+
   // Might need to be looked at / tested thoroughly
-  function decodeUint(bytes encodedUint) public pure returns (uint) {
+  function decodeUint(bytes encodedUint) internal pure returns (uint) {
     uint i = 0;
     for (uint8 j=0; j<encodedUint.length; j++) {
       i <<= 8;

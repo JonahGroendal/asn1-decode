@@ -1,15 +1,19 @@
 pragma solidity  ^0.4.23;
 
 library NodePtr {
+  // Unpack first byte index
   function ixs(uint self) internal pure returns (uint) {
     return uint80(self);
   }
+  // Unpack first content byte index
   function ixf(uint self) internal pure returns (uint) {
     return uint80(self>>80);
   }
+  // Unpack last content byte index
   function ixl(uint self) internal pure returns (uint) {
     return uint80(self>>160);
   }
+  // Pack 3 uint80s into a uint256
   function getPtr(uint _ixs, uint _ixf, uint _ixl) internal pure returns (uint) {
     _ixs |= _ixf<<80;
     _ixs |= _ixl<<160;
@@ -21,8 +25,7 @@ library Asn1Decode {
   using NodePtr for uint;
 
   /*
-   * First step in traversing an asn1 structure
-   *
+   * @dev Get the root node. First step in traversing an asn1 structure
    * @param der The der-encoded asn1 structure
    * @return a NodePtr object pointing to the outermost node
    */
@@ -31,36 +34,34 @@ library Asn1Decode {
   }
 
   /*
-   * Get the next sibling node
-   *
+   * @dev Get the next sibling node
    * @param der The der-encoded asn1 structure
-   * @param n The current node
+   * @param ptr Points to the indices of the current node
    * @return a NodePtr object pointing to the next sibling node
    */
-  function next(uint self, bytes der) public pure returns (uint) {
-  	return asn1_read_length(der, self.ixl()+1);
+  function nextSiblingOf(bytes der, uint ptr) public pure returns (uint) {
+  	return asn1_read_length(der, ptr.ixl()+1);
   }
 
   /*
-   * Get the first child node of the current node
-   *
+   * @dev Get the first child node of the current node
    * @param der The der-encoded asn1 structure
-   * @param n The current node
-   * @return a NodePtr object pointing to the next sibling node
+   * @param ptr Points to the indices of the current node
+   * @return a NodePtr object pointing to the first child node
    */
-  function firstChild(uint self, bytes der) public pure returns (uint) {
+  function firstChildOf(bytes der, uint ptr) public pure returns (uint) {
     // Can only open constructed types
-  	require(der[self.ixs()] & 0x20 == 0x20);
-  	return asn1_read_length(der, self.ixf());
+  	require(der[ptr.ixs()] & 0x20 == 0x20);
+  	return asn1_read_length(der, ptr.ixf());
   }
 
   /*
-   * Returs true if j is child of i or if i is child of j. Used for looping
+   * @dev Returns true if j is child of i or if i is child of j. Used for looping
    * through children of a given node (either i or j).
    *
    * @param i Pointer to an asn1 node
    * @param j Pointer to another asn1 node of the same asn1 structure
-   * @return weather i or j is the direct child of the other.
+   * @return Whether i or j is the direct child of the other.
    */
   function isChildOf(uint i/*aka self*/, uint j) public pure returns (bool) {
   	return ( ((i.ixf() <= j.ixs()) && (j.ixl() <= i.ixl())) ||
@@ -87,45 +88,58 @@ library Asn1Decode {
    bytes constant public LOCATION_VALID_NOT_BEFORE = '\x00\x02\x04\x01';
    bytes constant public LOCATION_VALID_NOT_AFTER = '\x00\x02\x04\x01\x01';
    bytes constant public LOCATION_PUB_KEY = '\x00\x02\x06';
-  function traverse(bytes der, bytes location) public pure returns (uint) {
-    uint node;
+  function traverseTo(bytes der, bytes location) public pure returns (uint) {
+    uint ptr;
     uint8 j;
     uint8 k;
 
-    node = root(der);
+    ptr = root(der);
     for (j=0; j<location.length; j++) {
       if (j % 2 == 0) {
         for (k=0; k<uint8(location[j]); k++) {
-          node = next(node, der);
+          ptr = nextSiblingOf(der, ptr);
         }
       } else {
         for (k=0; k<uint8(location[j]); k++) {
-          node = firstChild(node, der);
+          ptr = firstChildOf(der, ptr);
         }
       }
     }
-
-    return node;
+    return ptr;
   }
 
-  // Get the value of the node
-  function getValue(uint self, bytes der) public pure returns (bytes) {
-    uint valueLength = self.ixl() + 1 - self.ixf();
+  /*
+   * @dev Extract value of node from der-encoded structure
+   * @param der The der-encoded asn1 structure
+   * @param ptr Points to the indices of the current node
+   * @return value bytes of node
+   */
+  function bytesAt(bytes der, uint ptr) public pure returns (bytes) {
+    uint valueLength = ptr.ixl() + 1 - ptr.ixf();
     bytes memory ret = new bytes(valueLength);                 // currently there cannot be dynamic arrays in memory. This will need to be changed next protocol update
     for (uint i=0; i<valueLength; i++) {
-      ret[i] = der[self.ixf() + i];
+      ret[i] = der[ptr.ixf() + i];
     }
   	return ret;
   }
 
-  // Get the entire node
-  function getAll(uint self, bytes der) public pure returns (bytes) {
-    uint valueLength = self.ixl() + 1 - self.ixs();
+  /*
+   * @dev Extract node from der-encoded structure
+   * @param der The der-encoded asn1 structure
+   * @param ptr Points to the indices of the current node
+   * @return bytes of node
+   */
+  function allBytesAt(bytes der, uint ptr) public pure returns (bytes) {
+    uint valueLength = ptr.ixl() + 1 - ptr.ixs();
     bytes memory ret = new bytes(valueLength);                 // currently there cannot be dynamic arrays in memory. This will need to be changed next protocol update
     for (uint i=0; i<valueLength; i++) {
-      ret[i] = der[self.ixs() + i];
+      ret[i] = der[ptr.ixs() + i];
     }
   	return ret;
+  }
+
+  function uintAt(bytes der, uint ptr) public pure returns (uint) {
+    return decodeUint(bytesAt(der, ptr));
   }
 
   function decodeBitstring(bytes bitstr) public pure returns (bytes) {
@@ -148,7 +162,6 @@ library Asn1Decode {
   	return i;
   }
 
-  // helper func
   function asn1_read_length(bytes der, uint ix) private pure returns (uint) {
   	uint first = uint(der[ix+1]);
     uint length;

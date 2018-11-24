@@ -37,7 +37,7 @@ library Asn1Decode {
   }
 
   function rootOfBitstringAt(bytes der, uint ptr) internal pure returns (uint) {
-    require(der[ptr.ixs()] == 0x03); //Must be type BIT STRING
+    require(der[ptr.ixs()] == 0x03, "Not type BIT STRING");
     return asn1_read_length(der, ptr.ixf()+1);
   }
 
@@ -58,8 +58,7 @@ library Asn1Decode {
    * @return a NodePtr object pointing to the first child node
    */
   function firstChildOf(bytes der, uint ptr) internal pure returns (uint) {
-    // Can only open constructed types
-  	require(der[ptr.ixs()] & 0x20 == 0x20);
+  	require(der[ptr.ixs()] & 0x20 == 0x20, "Not a constructed type");
   	return asn1_read_length(der, ptr.ixf());
   }
 
@@ -71,7 +70,7 @@ library Asn1Decode {
    * @param j Pointer to another asn1 node of the same asn1 structure
    * @return Whether i or j is the direct child of the other.
    */
-  function isChildOf(uint i/*aka self*/, uint j) internal pure returns (bool) {
+  function isChildOf(uint i, uint j) internal pure returns (bool) {
   	return ( ((i.ixf() <= j.ixs()) && (j.ixl() <= i.ixl())) ||
              ((j.ixf() <= i.ixs()) && (i.ixl() <= j.ixl())) );
   }
@@ -149,14 +148,14 @@ library Asn1Decode {
   }
 
   function uintAt(bytes der, uint ptr) internal pure returns (uint) {
-    require(der[ptr.ixs()] == 0x02); // Must be type INTEGER
-    require(der[ptr.ixf()] & 0x80 == 0); // Must be positive
+    require(der[ptr.ixs()] == 0x02, "Not type INTEGER");
+    require(der[ptr.ixf()] & 0x80 == 0, "Not positive");
     return decodeUint(bytesAt(der, ptr));
   }
 
   function uintBytesAt(bytes der, uint ptr) internal pure returns (bytes) {
-    require(der[ptr.ixs()] == 0x02); // Must be type INTEGER
-    require(der[ptr.ixf()] & 0x80 == 0); // Must be positive
+    require(der[ptr.ixs()] == 0x02, "Not type INTEGER");
+    require(der[ptr.ixf()] & 0x80 == 0, "Not positive");
     uint valueLength = ptr.ixl() + 1 - ptr.ixf();
     if (der[ptr.ixf()] == 0)
       return der.substring(ptr.ixf()+1, valueLength-1);
@@ -175,7 +174,7 @@ library Asn1Decode {
   } */
 
   function bitstringAt(bytes der, uint ptr) internal pure returns (bytes) {
-    require(der[ptr.ixs()] == 0x03); // Must be type BIT STRING
+    require(der[ptr.ixs()] == 0x03, "Not type BIT STRING");
     // Only 00 padded bitstr can be converted to bytestr!
     require(der[ptr.ixf()] == 0x00);
     uint valueLength = ptr.ixl() + 1 - ptr.ixf();

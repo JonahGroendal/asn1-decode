@@ -36,6 +36,11 @@ library Asn1Decode {
   	return asn1_read_length(der, 0);
   }
 
+  function rootOfBitstringAt(bytes der, uint ptr) internal pure returns (uint) {
+    require(der[ptr.ixs()] == 0x03); //Must be type BIT STRING
+    return asn1_read_length(der, ptr.ixf()+1);
+  }
+
   /*
    * @dev Get the next sibling node
    * @param der The der-encoded asn1 structure
@@ -144,7 +149,19 @@ library Asn1Decode {
   }
 
   function uintAt(bytes der, uint ptr) internal pure returns (uint) {
+    require(der[ptr.ixs()] == 0x02); // Must be type INTEGER
+    require(der[ptr.ixf()] & 0x80 == 0); // Must be positive
     return decodeUint(bytesAt(der, ptr));
+  }
+
+  function uintBytesAt(bytes der, uint ptr) internal pure returns (bytes) {
+    require(der[ptr.ixs()] == 0x02); // Must be type INTEGER
+    require(der[ptr.ixf()] & 0x80 == 0); // Must be positive
+    uint valueLength = ptr.ixl() + 1 - ptr.ixf();
+    if (der[ptr.ixf()] == 0)
+      return der.substring(ptr.ixf()+1, valueLength-1);
+    else
+      return der.substring(ptr.ixf(), valueLength);
   }
 
   /* function decodeBitstring(bytes bitstr) internal pure returns (bytes) {
@@ -158,6 +175,9 @@ library Asn1Decode {
   } */
 
   function bitstringAt(bytes der, uint ptr) internal pure returns (bytes) {
+    require(der[ptr.ixs()] == 0x03); // Must be type BIT STRING
+    // Only 00 padded bitstr can be converted to bytestr!
+    require(der[ptr.ixf()] == 0x00);
     uint valueLength = ptr.ixl() + 1 - ptr.ixf();
     return der.substring(ptr.ixf()+1, valueLength-1);
   }

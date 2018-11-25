@@ -89,31 +89,37 @@ library Asn1Decode {
    *
    *  @return a NodePtr struct pointing to the index of the node traversed to
    */
-   bytes constant internal COMMON_NAME = "\x55\x04\x03";
+   /* bytes constant internal COMMON_NAME = "\x55\x04\x03";
    // shortcuts to commonly used X509 nodes
    bytes constant internal LOCATION_SERIAL_NUMBER = '\x00\x02\x01';
    bytes constant internal LOCATION_VALID_NOT_BEFORE = '\x00\x02\x04\x01';
    bytes constant internal LOCATION_VALID_NOT_AFTER = '\x00\x02\x04\x01\x01';
    bytes constant internal LOCATION_PUB_KEY = '\x00\x02\x06';
-  function traverseTo(bytes der, bytes location) internal pure returns (uint) {
-    uint ptr;
+  function traverseTo(bytes der, bytes32 location)
+  internal pure returns (uint)
+  {
     uint8 j;
     uint8 k;
-
-    ptr = root(der);
-    for (j=0; j<location.length; j++) {
-      if (j % 2 == 0) {
-        for (k=0; k<uint8(location[j]); k++) {
-          ptr = nextSiblingOf(der, ptr);
-        }
+    uint8 stop;
+    uint ptr = root(der);
+    for (j=0; j<32; j++) {
+      if (location[j] == 0x00) {
+        if (j != 32 && location[j+1] == 0x00) break;
       } else {
-        for (k=0; k<uint8(location[j]); k++) {
-          ptr = firstChildOf(der, ptr);
+        if (j % 2 == 0) {
+          for (k=0; k<uint8(location[j]); k++) {
+            ptr = nextSiblingOf(der, ptr);
+            stop = 0;
+          }
+        } else {
+          for (k=0; k<uint8(location[j]); k++) {
+            ptr = firstChildOf(der, ptr);
+          }
         }
       }
     }
     return ptr;
-  }
+  } */
 
   /*
    * @dev Extract value of node from der-encoded structure

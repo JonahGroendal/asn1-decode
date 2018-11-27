@@ -1,6 +1,6 @@
 pragma solidity  ^0.4.23;
 
-import "./BytesUtil.sol";
+import "@ensdomains/dnssec-oracle/contracts/BytesUtils.sol";
 
 library NodePtr {
   // Unpack first byte index
@@ -25,7 +25,7 @@ library NodePtr {
 
 library Asn1Decode {
   using NodePtr for uint;
-  using BytesUtil for bytes;
+  using BytesUtils for bytes;
 
   /*
    * @dev Get the root node. First step in traversing an asn1 structure

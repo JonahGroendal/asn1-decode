@@ -128,8 +128,7 @@ library Asn1Decode {
    * @return value bytes of node
    */
   function bytesAt(bytes der, uint ptr) internal pure returns (bytes) {
-    uint valueLength = ptr.ixl() + 1 - ptr.ixf();
-    return der.substring(ptr.ixf(), valueLength);
+    return der.substring(ptr.ixf(), ptr.ixl() + 1 - ptr.ixf());
     /* bytes memory ret = new bytes(valueLength);                 // currently there cannot be dynamic arrays in memory. This will need to be changed next protocol update
     for (uint i=0; i<valueLength; i++) {
       ret[i] = der[ptr.ixf() + i];
@@ -144,13 +143,16 @@ library Asn1Decode {
    * @return bytes of node
    */
   function allBytesAt(bytes der, uint ptr) internal pure returns (bytes) {
-    uint valueLength = ptr.ixl() + 1 - ptr.ixs();
-    return der.substring(ptr.ixs(), valueLength);
+    return der.substring(ptr.ixs(), ptr.ixl() + 1 - ptr.ixs());
     /* bytes memory ret = new bytes(valueLength);                 // currently there cannot be dynamic arrays in memory. This will need to be changed next protocol update
     for (uint i=0; i<valueLength; i++) {
       ret[i] = der[ptr.ixs() + i];
     }
   	return ret; */
+  }
+
+  function bytes32At(bytes der, uint ptr) internal pure returns (bytes32) {
+    return der.readBytesN(ptr.ixs(), ptr.ixl() + 1 - ptr.ixs());
   }
 
   function uintAt(bytes der, uint ptr) internal pure returns (uint) {

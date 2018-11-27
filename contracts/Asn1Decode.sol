@@ -152,7 +152,7 @@ library Asn1Decode {
   }
 
   function bytes32At(bytes der, uint ptr) internal pure returns (bytes32) {
-    return der.readBytesN(ptr.ixs(), ptr.ixl() + 1 - ptr.ixs());
+    return der.readBytesN(ptr.ixf(), ptr.ixl() + 1 - ptr.ixf());
   }
 
   function uintAt(bytes der, uint ptr) internal pure returns (uint) {
@@ -169,6 +169,14 @@ library Asn1Decode {
       return der.substring(ptr.ixf()+1, valueLength-1);
     else
       return der.substring(ptr.ixf(), valueLength);
+  }
+
+  function keccakOfBytesAt(bytes der, uint ptr) internal pure returns (bytes32) {
+    return der.keccak(ptr.ixf(), ptr.ixl() + 1 - ptr.ixf());
+  }
+
+  function keccakOfAllBytesAt(bytes der, uint ptr) internal pure returns (bytes32) {
+    return der.keccak(ptr.ixs(), ptr.ixl() + 1 - ptr.ixs());
   }
 
   /* function decodeBitstring(bytes bitstr) internal pure returns (bytes) {

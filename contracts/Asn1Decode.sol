@@ -1,6 +1,6 @@
-pragma solidity  ^0.4.23;
+pragma solidity  ^0.5.1;
 
-import "@ensdomains/dnssec-oracle/contracts/BytesUtils.sol";
+import "solidity-bytes-utils/contracts/BytesUtils.sol";
 
 library NodePtr {
   // Unpack first byte index
@@ -32,7 +32,7 @@ library Asn1Decode {
    * @param der The DER-encoded ASN1 structure
    * @return A pointer to the outermost node
    */
-  function root(bytes der) internal pure returns (uint) {
+  function root(bytes memory der) internal pure returns (uint) {
   	return readNodeLength(der, 0);
   }
 
@@ -41,7 +41,7 @@ library Asn1Decode {
    * @param der The DER-encoded ASN1 structure
    * @return A pointer to the outermost node
    */
-  function rootOfBitstringAt(bytes der, uint ptr) internal pure returns (uint) {
+  function rootOfBitstringAt(bytes memory der, uint ptr) internal pure returns (uint) {
     require(der[ptr.ixs()] == 0x03, "Not type BIT STRING");
     return readNodeLength(der, ptr.ixf()+1);
   }
@@ -52,7 +52,7 @@ library Asn1Decode {
    * @param ptr Points to the indices of the current node
    * @return A pointer to the next sibling node
    */
-  function nextSiblingOf(bytes der, uint ptr) internal pure returns (uint) {
+  function nextSiblingOf(bytes memory der, uint ptr) internal pure returns (uint) {
   	return readNodeLength(der, ptr.ixl()+1);
   }
 
@@ -62,7 +62,7 @@ library Asn1Decode {
    * @param ptr Points to the indices of the current node
    * @return A pointer to the first child node
    */
-  function firstChildOf(bytes der, uint ptr) internal pure returns (uint) {
+  function firstChildOf(bytes memory der, uint ptr) internal pure returns (uint) {
   	require(der[ptr.ixs()] & 0x20 == 0x20, "Not a constructed type");
   	return readNodeLength(der, ptr.ixf());
   }
@@ -84,7 +84,7 @@ library Asn1Decode {
    * @param ptr Points to the indices of the current node
    * @return Value bytes of node
    */
-  function bytesAt(bytes der, uint ptr) internal pure returns (bytes) {
+  function bytesAt(bytes memory der, uint ptr) internal pure returns (bytes memory) {
     return der.substring(ptr.ixf(), ptr.ixl()+1 - ptr.ixf());
   }
 
@@ -94,7 +94,7 @@ library Asn1Decode {
    * @param ptr Points to the indices of the current node
    * @return All bytes of node
    */
-  function allBytesAt(bytes der, uint ptr) internal pure returns (bytes) {
+  function allBytesAt(bytes memory der, uint ptr) internal pure returns (bytes memory) {
     return der.substring(ptr.ixs(), ptr.ixl()+1 - ptr.ixs());
   }
 
@@ -104,7 +104,7 @@ library Asn1Decode {
    * @param ptr Points to the indices of the current node
    * @return Value bytes of node as bytes32
    */
-  function bytes32At(bytes der, uint ptr) internal pure returns (bytes32) {
+  function bytes32At(bytes memory der, uint ptr) internal pure returns (bytes32) {
     return der.readBytesN(ptr.ixf(), ptr.ixl()+1 - ptr.ixf());
   }
 
@@ -114,7 +114,7 @@ library Asn1Decode {
    * @param ptr Points to the indices of the current node
    * @return Uint value of node
    */
-  function uintAt(bytes der, uint ptr) internal pure returns (uint) {
+  function uintAt(bytes memory der, uint ptr) internal pure returns (uint) {
     require(der[ptr.ixs()] == 0x02, "Not type INTEGER");
     require(der[ptr.ixf()] & 0x80 == 0, "Not positive");
     uint len = ptr.ixl()+1 - ptr.ixf();
@@ -127,7 +127,7 @@ library Asn1Decode {
    * @param ptr Points to the indices of the current node
    * @return Value bytes of a positive integer node
    */
-  function uintBytesAt(bytes der, uint ptr) internal pure returns (bytes) {
+  function uintBytesAt(bytes memory der, uint ptr) internal pure returns (bytes memory) {
     require(der[ptr.ixs()] == 0x02, "Not type INTEGER");
     require(der[ptr.ixf()] & 0x80 == 0, "Not positive");
     uint valueLength = ptr.ixl()+1 - ptr.ixf();
@@ -137,11 +137,11 @@ library Asn1Decode {
       return der.substring(ptr.ixf(), valueLength);
   }
 
-  function keccakOfBytesAt(bytes der, uint ptr) internal pure returns (bytes32) {
+  function keccakOfBytesAt(bytes memory der, uint ptr) internal pure returns (bytes32) {
     return der.keccak(ptr.ixf(), ptr.ixl()+1 - ptr.ixf());
   }
 
-  function keccakOfAllBytesAt(bytes der, uint ptr) internal pure returns (bytes32) {
+  function keccakOfAllBytesAt(bytes memory der, uint ptr) internal pure returns (bytes32) {
     return der.keccak(ptr.ixs(), ptr.ixl()+1 - ptr.ixs());
   }
 
@@ -151,7 +151,7 @@ library Asn1Decode {
    * @param ptr Points to the indices of the current node
    * @return Value of bitstring converted to bytes
    */
-  function bitstringAt(bytes der, uint ptr) internal pure returns (bytes) {
+  function bitstringAt(bytes memory der, uint ptr) internal pure returns (bytes memory) {
     require(der[ptr.ixs()] == 0x03, "Not type BIT STRING");
     // Only 00 padded bitstr can be converted to bytestr!
     require(der[ptr.ixf()] == 0x00);
@@ -159,12 +159,12 @@ library Asn1Decode {
     return der.substring(ptr.ixf()+1, valueLength-1);
   }
 
-  function readNodeLength(bytes der, uint ix) private pure returns (uint) {
+  function readNodeLength(bytes memory der, uint ix) private pure returns (uint) {
     uint length;
     uint80 ixFirstContentByte;
     uint80 ixLastContentByte;
   	if ((der[ix+1] & 0x80) == 0) {
-  		length = uint(der[ix+1]);
+  		length = uint8(der[ix+1]);
   		ixFirstContentByte = uint80(ix+2);
   		ixLastContentByte = uint80(ixFirstContentByte + length -1);
     } else {

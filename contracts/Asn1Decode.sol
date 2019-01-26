@@ -37,13 +37,23 @@ library Asn1Decode {
   }
 
   /*
-   * @dev Get the root node of an ASN1 structure that's within a bitstring value
+   * @dev Get the root node of an ASN1 structure that's within a bit string value
    * @param der The DER-encoded ASN1 structure
    * @return A pointer to the outermost node
    */
-  function rootOfBitstringAt(bytes memory der, uint ptr) internal pure returns (uint) {
+  function rootOfBitStringAt(bytes memory der, uint ptr) internal pure returns (uint) {
     require(der[ptr.ixs()] == 0x03, "Not type BIT STRING");
     return readNodeLength(der, ptr.ixf()+1);
+  }
+
+  /*
+   * @dev Get the root node of an ASN1 structure that's within an octet string value
+   * @param der The DER-encoded ASN1 structure
+   * @return A pointer to the outermost node
+   */
+  function rootOfOctetStringAt(bytes memory der, uint ptr) internal pure returns (uint) {
+    require(der[ptr.ixs()] == 0x04, "Not type OCTET STRING");
+    return readNodeLength(der, ptr.ixf());
   }
 
   /*

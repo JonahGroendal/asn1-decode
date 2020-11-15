@@ -1,11 +1,12 @@
 {
   "contractName": "BytesUtils",
   "abi": [],
-  "bytecode": "0x604c602c600b82828239805160001a60731460008114601c57601e565bfe5b5030600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea165627a7a723058208fccfb77a785affda5d5cc62148f1ddd76f3173239284dcad708e17e8f53c2580029",
-  "deployedBytecode": "0x73000000000000000000000000000000000000000030146080604052600080fdfea165627a7a723058208fccfb77a785affda5d5cc62148f1ddd76f3173239284dcad708e17e8f53c2580029",
-  "sourceMap": "25:11128:2:-;;132:2:-1;166:7;155:9;146:7;137:37;252:7;246:14;243:1;238:23;232:4;229:33;270:1;265:20;;;;222:63;;265:20;274:9;222:63;;298:9;295:1;288:20;328:4;319:7;311:22;352:7;343;336:24",
+  "metadata": "{\"compiler\":{\"version\":\"0.5.16+commit.9c3226ce\"},\"language\":\"Solidity\",\"output\":{\"abi\":[],\"devdoc\":{\"methods\":{}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"solidity-bytes-utils/contracts/BytesUtils.sol\":\"BytesUtils\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"solidity-bytes-utils/contracts/BytesUtils.sol\":{\"keccak256\":\"0xf7b06ee1a19e290f9bf34a72954fa7b5d9256451806ead7fdd192e4a0be9d44b\",\"urls\":[\"bzz-raw://13cd34d0137df81698c33215cc4d7c5764137d7a435640ca072db6c5f8463e78\",\"dweb:/ipfs/QmcowVVedzkhzchW24FESswsQbCeEbD4uNDd4biAjRWe1f\"]}},\"version\":1}",
+  "bytecode": "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820454f51aef5cad5510486e3d27b1da20021c35ffc84dc6826b6cd8b708e30030264736f6c63430005100032",
+  "deployedBytecode": "0x73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820454f51aef5cad5510486e3d27b1da20021c35ffc84dc6826b6cd8b708e30030264736f6c63430005100032",
+  "sourceMap": "25:11128:2:-;;132:2:-1;166:7;155:9;146:7;137:37;255:7;249:14;246:1;241:23;235:4;232:33;222:2;;269:9;222:2;293:9;290:1;283:20;323:4;314:7;306:22;347:7;338;331:24",
   "deployedSourceMap": "25:11128:2:-;;;;;;;;",
-  "source": "pragma solidity ^0.5.1;\n\nlibrary BytesUtils {\n    /*\n    * @dev Returns the keccak-256 hash of a byte range.\n    * @param self The byte string to hash.\n    * @param offset The position to start hashing at.\n    * @param len The number of bytes to hash.\n    * @return The hash of the byte range.\n    */\n    function keccak(bytes memory self, uint offset, uint len) internal pure returns (bytes32 ret) {\n        require(offset + len <= self.length);\n        assembly {\n            ret := keccak256(add(add(self, 32), offset), len)\n        }\n    }\n\n\n    /*\n    * @dev Returns a positive number if `other` comes lexicographically after\n    *      `self`, a negative number if it comes before, or zero if the\n    *      contents of the two bytes are equal.\n    * @param self The first bytes to compare.\n    * @param other The second bytes to compare.\n    * @return The result of the comparison.\n    */\n    function compare(bytes memory self, bytes memory other) internal pure returns (int) {\n        return compare(self, 0, self.length, other, 0, other.length);\n    }\n\n    /*\n    * @dev Returns a positive number if `other` comes lexicographically after\n    *      `self`, a negative number if it comes before, or zero if the\n    *      contents of the two bytes are equal. Comparison is done per-rune,\n    *      on unicode codepoints.\n    * @param self The first bytes to compare.\n    * @param offset The offset of self.\n    * @param len    The length of self.\n    * @param other The second bytes to compare.\n    * @param otheroffset The offset of the other string.\n    * @param otherlen    The length of the other string.\n    * @return The result of the comparison.\n    */\n    function compare(bytes memory self, uint offset, uint len, bytes memory other, uint otheroffset, uint otherlen) internal pure returns (int) {\n        uint shortest = len;\n        if (otherlen < len)\n        shortest = otherlen;\n\n        uint selfptr;\n        uint otherptr;\n\n        assembly {\n            selfptr := add(self, add(offset, 32))\n            otherptr := add(other, add(otheroffset, 32))\n        }\n        for (uint idx = 0; idx < shortest; idx += 32) {\n            uint a;\n            uint b;\n            assembly {\n                a := mload(selfptr)\n                b := mload(otherptr)\n            }\n            if (a != b) {\n                // Mask out irrelevant bytes and check again\n                uint mask;\n                if (shortest > 32) {\n                    mask = uint256(- 1); // aka 0xffffff....\n                } else {\n                    mask = ~(2 ** (8 * (32 - shortest + idx)) - 1);\n                }\n                uint diff = (a & mask) - (b & mask);\n                if (diff != 0)\n                return int(diff);\n            }\n            selfptr += 32;\n            otherptr += 32;\n        }\n\n        return int(len) - int(otherlen);\n    }\n\n    /*\n    * @dev Returns true if the two byte ranges are equal.\n    * @param self The first byte range to compare.\n    * @param offset The offset into the first byte range.\n    * @param other The second byte range to compare.\n    * @param otherOffset The offset into the second byte range.\n    * @param len The number of bytes to compare\n    * @return True if the byte ranges are equal, false otherwise.\n    */\n    function equals(bytes memory self, uint offset, bytes memory other, uint otherOffset, uint len) internal pure returns (bool) {\n        return keccak(self, offset, len) == keccak(other, otherOffset, len);\n    }\n\n    /*\n    * @dev Returns true if the two byte ranges are equal with offsets.\n    * @param self The first byte range to compare.\n    * @param offset The offset into the first byte range.\n    * @param other The second byte range to compare.\n    * @param otherOffset The offset into the second byte range.\n    * @return True if the byte ranges are equal, false otherwise.\n    */\n    function equals(bytes memory self, uint offset, bytes memory other, uint otherOffset) internal pure returns (bool) {\n        return keccak(self, offset, self.length - offset) == keccak(other, otherOffset, other.length - otherOffset);\n    }\n\n    /*\n    * @dev Compares a range of 'self' to all of 'other' and returns True iff\n    *      they are equal.\n    * @param self The first byte range to compare.\n    * @param offset The offset into the first byte range.\n    * @param other The second byte range to compare.\n    * @return True if the byte ranges are equal, false otherwise.\n    */\n    function equals(bytes memory self, uint offset, bytes memory other) internal pure returns (bool) {\n        return self.length >= offset + other.length && equals(self, offset, other, 0, other.length);\n    }\n\n    /*\n    * @dev Returns true if the two byte ranges are equal.\n    * @param self The first byte range to compare.\n    * @param other The second byte range to compare.\n    * @return True if the byte ranges are equal, false otherwise.\n    */\n    function equals(bytes memory self, bytes memory other) internal pure returns(bool) {\n        return self.length == other.length && equals(self, 0, other, 0, self.length);\n    }\n\n    /*\n    * @dev Returns the 8-bit number at the specified index of self.\n    * @param self The byte string.\n    * @param idx The index into the bytes\n    * @return The specified 8 bits of the string, interpreted as an integer.\n    */\n    function readUint8(bytes memory self, uint idx) internal pure returns (uint8 ret) {\n        require(idx + 1 <= self.length);\n        assembly {\n            ret := and(mload(add(add(self, 1), idx)), 0xFF)\n        }\n    }\n\n    /*\n    * @dev Returns the 16-bit number at the specified index of self.\n    * @param self The byte string.\n    * @param idx The index into the bytes\n    * @return The specified 16 bits of the string, interpreted as an integer.\n    */\n    function readUint16(bytes memory self, uint idx) internal pure returns (uint16 ret) {\n        require(idx + 2 <= self.length);\n        assembly {\n            ret := and(mload(add(add(self, 2), idx)), 0xFFFF)\n        }\n    }\n\n    /*\n    * @dev Returns the 32-bit number at the specified index of self.\n    * @param self The byte string.\n    * @param idx The index into the bytes\n    * @return The specified 32 bits of the string, interpreted as an integer.\n    */\n    function readUint32(bytes memory self, uint idx) internal pure returns (uint32 ret) {\n        require(idx + 4 <= self.length);\n        assembly {\n            ret := and(mload(add(add(self, 4), idx)), 0xFFFFFFFF)\n        }\n    }\n\n    /*\n    * @dev Returns the 32 byte value at the specified index of self.\n    * @param self The byte string.\n    * @param idx The index into the bytes\n    * @return The specified 32 bytes of the string.\n    */\n    function readBytes32(bytes memory self, uint idx) internal pure returns (bytes32 ret) {\n        require(idx + 32 <= self.length);\n        assembly {\n            ret := mload(add(add(self, 32), idx))\n        }\n    }\n\n    /*\n    * @dev Returns the 32 byte value at the specified index of self.\n    * @param self The byte string.\n    * @param idx The index into the bytes\n    * @return The specified 32 bytes of the string.\n    */\n    function readBytes20(bytes memory self, uint idx) internal pure returns (bytes20 ret) {\n        require(idx + 20 <= self.length);\n        assembly {\n            ret := and(mload(add(add(self, 32), idx)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000)\n        }\n    }\n\n    /*\n    * @dev Returns the n byte value at the specified index of self.\n    * @param self The byte string.\n    * @param idx The index into the bytes.\n    * @param len The number of bytes.\n    * @return The specified 32 bytes of the string.\n    */\n    function readBytesN(bytes memory self, uint idx, uint len) internal pure returns (bytes32 ret) {\n        require(len <= 32);\n        require(idx + len <= self.length);\n        assembly {\n            let mask := not(sub(exp(256, sub(32, len)), 1))\n            ret := and(mload(add(add(self, 32), idx)),  mask)\n        }\n    }\n\n    function memcpy(uint dest, uint src, uint len) private pure {\n        // Copy word-length chunks while possible\n        for (; len >= 32; len -= 32) {\n            assembly {\n                mstore(dest, mload(src))\n            }\n            dest += 32;\n            src += 32;\n        }\n\n        // Copy remaining bytes\n        uint mask = 256 ** (32 - len) - 1;\n        assembly {\n            let srcpart := and(mload(src), not(mask))\n            let destpart := and(mload(dest), mask)\n            mstore(dest, or(destpart, srcpart))\n        }\n    }\n\n    /*\n    * @dev Copies a substring into a new byte string.\n    * @param self The byte string to copy from.\n    * @param offset The offset to start copying at.\n    * @param len The number of bytes to copy.\n    */\n    function substring(bytes memory self, uint offset, uint len) internal pure returns(bytes memory) {\n        require(offset + len <= self.length);\n\n        bytes memory ret = new bytes(len);\n        uint dest;\n        uint src;\n\n        assembly {\n            dest := add(ret, 32)\n            src := add(add(self, 32), offset)\n        }\n        memcpy(dest, src, len);\n\n        return ret;\n    }\n\n    // Maps characters from 0x30 to 0x7A to their base32 values.\n    // 0xFF represents invalid characters in that range.\n    bytes constant base32HexTable = hex'00010203040506070809FFFFFFFFFFFFFF0A0B0C0D0E0F101112131415161718191A1B1C1D1E1FFFFFFFFFFFFFFFFFFFFF0A0B0C0D0E0F101112131415161718191A1B1C1D1E1F';\n\n    /**\n     * @dev Decodes unpadded base32 data of up to one word in length.\n     * @param self The data to decode.\n     * @param off Offset into the string to start at.\n     * @param len Number of characters to decode.\n     * @return The decoded data, left aligned.\n     */\n    function base32HexDecodeWord(bytes memory self, uint off, uint len) internal pure returns(bytes32) {\n        require(len <= 52);\n        uint8 decoded;\n        uint ret = 0;\n        for(uint i = 0; i < len; i++) {\n            byte char = self[off + i];\n            require(char >= 0x30 && char <= 0x7A);\n            decoded = uint8(base32HexTable[uint8(char) - 0x30]);\n            require(decoded <= 0x20);\n            if(i == len - 1) {\n                break;\n            }\n            ret = (ret << 5) | decoded;\n        }\n\n        uint bitlen = len * 5;\n        if(len % 8 == 0) {\n            // Multiple of 8 characters, no padding\n            ret = (ret << 5) | decoded;\n        } else if(len % 8 == 2) {\n            // Two extra characters - 1 byte\n            ret = (ret << 3) | (decoded >> 2);\n            bitlen -= 2;\n        } else if(len % 8 == 4) {\n            // Four extra characters - 2 bytes\n            ret = (ret << 1) | (decoded >> 4);\n            bitlen -= 4;\n        } else if(len % 8 == 5) {\n            // Five extra characters - 3 bytes\n            ret = (ret << 4) | (decoded >> 1);\n            bitlen -= 1;\n        } else if(len % 8 == 7) {\n            // Seven extra characters - 4 bytes\n            ret = (ret << 2) | (decoded >> 3);\n            bitlen -= 3;\n        } else {\n            revert();\n        }\n\n        return bytes32(ret << (256 - bitlen));\n    }\n}\n",
+  "source": "pragma solidity ^0.5.2;\n\nlibrary BytesUtils {\n    /*\n    * @dev Returns the keccak-256 hash of a byte range.\n    * @param self The byte string to hash.\n    * @param offset The position to start hashing at.\n    * @param len The number of bytes to hash.\n    * @return The hash of the byte range.\n    */\n    function keccak(bytes memory self, uint offset, uint len) internal pure returns (bytes32 ret) {\n        require(offset + len <= self.length);\n        assembly {\n            ret := keccak256(add(add(self, 32), offset), len)\n        }\n    }\n\n\n    /*\n    * @dev Returns a positive number if `other` comes lexicographically after\n    *      `self`, a negative number if it comes before, or zero if the\n    *      contents of the two bytes are equal.\n    * @param self The first bytes to compare.\n    * @param other The second bytes to compare.\n    * @return The result of the comparison.\n    */\n    function compare(bytes memory self, bytes memory other) internal pure returns (int) {\n        return compare(self, 0, self.length, other, 0, other.length);\n    }\n\n    /*\n    * @dev Returns a positive number if `other` comes lexicographically after\n    *      `self`, a negative number if it comes before, or zero if the\n    *      contents of the two bytes are equal. Comparison is done per-rune,\n    *      on unicode codepoints.\n    * @param self The first bytes to compare.\n    * @param offset The offset of self.\n    * @param len    The length of self.\n    * @param other The second bytes to compare.\n    * @param otheroffset The offset of the other string.\n    * @param otherlen    The length of the other string.\n    * @return The result of the comparison.\n    */\n    function compare(bytes memory self, uint offset, uint len, bytes memory other, uint otheroffset, uint otherlen) internal pure returns (int) {\n        uint shortest = len;\n        if (otherlen < len)\n        shortest = otherlen;\n\n        uint selfptr;\n        uint otherptr;\n\n        assembly {\n            selfptr := add(self, add(offset, 32))\n            otherptr := add(other, add(otheroffset, 32))\n        }\n        for (uint idx = 0; idx < shortest; idx += 32) {\n            uint a;\n            uint b;\n            assembly {\n                a := mload(selfptr)\n                b := mload(otherptr)\n            }\n            if (a != b) {\n                // Mask out irrelevant bytes and check again\n                uint mask;\n                if (shortest > 32) {\n                    mask = uint256(- 1); // aka 0xffffff....\n                } else {\n                    mask = ~(2 ** (8 * (32 - shortest + idx)) - 1);\n                }\n                uint diff = (a & mask) - (b & mask);\n                if (diff != 0)\n                return int(diff);\n            }\n            selfptr += 32;\n            otherptr += 32;\n        }\n\n        return int(len) - int(otherlen);\n    }\n\n    /*\n    * @dev Returns true if the two byte ranges are equal.\n    * @param self The first byte range to compare.\n    * @param offset The offset into the first byte range.\n    * @param other The second byte range to compare.\n    * @param otherOffset The offset into the second byte range.\n    * @param len The number of bytes to compare\n    * @return True if the byte ranges are equal, false otherwise.\n    */\n    function equals(bytes memory self, uint offset, bytes memory other, uint otherOffset, uint len) internal pure returns (bool) {\n        return keccak(self, offset, len) == keccak(other, otherOffset, len);\n    }\n\n    /*\n    * @dev Returns true if the two byte ranges are equal with offsets.\n    * @param self The first byte range to compare.\n    * @param offset The offset into the first byte range.\n    * @param other The second byte range to compare.\n    * @param otherOffset The offset into the second byte range.\n    * @return True if the byte ranges are equal, false otherwise.\n    */\n    function equals(bytes memory self, uint offset, bytes memory other, uint otherOffset) internal pure returns (bool) {\n        return keccak(self, offset, self.length - offset) == keccak(other, otherOffset, other.length - otherOffset);\n    }\n\n    /*\n    * @dev Compares a range of 'self' to all of 'other' and returns True iff\n    *      they are equal.\n    * @param self The first byte range to compare.\n    * @param offset The offset into the first byte range.\n    * @param other The second byte range to compare.\n    * @return True if the byte ranges are equal, false otherwise.\n    */\n    function equals(bytes memory self, uint offset, bytes memory other) internal pure returns (bool) {\n        return self.length >= offset + other.length && equals(self, offset, other, 0, other.length);\n    }\n\n    /*\n    * @dev Returns true if the two byte ranges are equal.\n    * @param self The first byte range to compare.\n    * @param other The second byte range to compare.\n    * @return True if the byte ranges are equal, false otherwise.\n    */\n    function equals(bytes memory self, bytes memory other) internal pure returns(bool) {\n        return self.length == other.length && equals(self, 0, other, 0, self.length);\n    }\n\n    /*\n    * @dev Returns the 8-bit number at the specified index of self.\n    * @param self The byte string.\n    * @param idx The index into the bytes\n    * @return The specified 8 bits of the string, interpreted as an integer.\n    */\n    function readUint8(bytes memory self, uint idx) internal pure returns (uint8 ret) {\n        require(idx + 1 <= self.length);\n        assembly {\n            ret := and(mload(add(add(self, 1), idx)), 0xFF)\n        }\n    }\n\n    /*\n    * @dev Returns the 16-bit number at the specified index of self.\n    * @param self The byte string.\n    * @param idx The index into the bytes\n    * @return The specified 16 bits of the string, interpreted as an integer.\n    */\n    function readUint16(bytes memory self, uint idx) internal pure returns (uint16 ret) {\n        require(idx + 2 <= self.length);\n        assembly {\n            ret := and(mload(add(add(self, 2), idx)), 0xFFFF)\n        }\n    }\n\n    /*\n    * @dev Returns the 32-bit number at the specified index of self.\n    * @param self The byte string.\n    * @param idx The index into the bytes\n    * @return The specified 32 bits of the string, interpreted as an integer.\n    */\n    function readUint32(bytes memory self, uint idx) internal pure returns (uint32 ret) {\n        require(idx + 4 <= self.length);\n        assembly {\n            ret := and(mload(add(add(self, 4), idx)), 0xFFFFFFFF)\n        }\n    }\n\n    /*\n    * @dev Returns the 32 byte value at the specified index of self.\n    * @param self The byte string.\n    * @param idx The index into the bytes\n    * @return The specified 32 bytes of the string.\n    */\n    function readBytes32(bytes memory self, uint idx) internal pure returns (bytes32 ret) {\n        require(idx + 32 <= self.length);\n        assembly {\n            ret := mload(add(add(self, 32), idx))\n        }\n    }\n\n    /*\n    * @dev Returns the 32 byte value at the specified index of self.\n    * @param self The byte string.\n    * @param idx The index into the bytes\n    * @return The specified 32 bytes of the string.\n    */\n    function readBytes20(bytes memory self, uint idx) internal pure returns (bytes20 ret) {\n        require(idx + 20 <= self.length);\n        assembly {\n            ret := and(mload(add(add(self, 32), idx)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000)\n        }\n    }\n\n    /*\n    * @dev Returns the n byte value at the specified index of self.\n    * @param self The byte string.\n    * @param idx The index into the bytes.\n    * @param len The number of bytes.\n    * @return The specified 32 bytes of the string.\n    */\n    function readBytesN(bytes memory self, uint idx, uint len) internal pure returns (bytes32 ret) {\n        require(len <= 32);\n        require(idx + len <= self.length);\n        assembly {\n            let mask := not(sub(exp(256, sub(32, len)), 1))\n            ret := and(mload(add(add(self, 32), idx)),  mask)\n        }\n    }\n\n    function memcpy(uint dest, uint src, uint len) private pure {\n        // Copy word-length chunks while possible\n        for (; len >= 32; len -= 32) {\n            assembly {\n                mstore(dest, mload(src))\n            }\n            dest += 32;\n            src += 32;\n        }\n\n        // Copy remaining bytes\n        uint mask = 256 ** (32 - len) - 1;\n        assembly {\n            let srcpart := and(mload(src), not(mask))\n            let destpart := and(mload(dest), mask)\n            mstore(dest, or(destpart, srcpart))\n        }\n    }\n\n    /*\n    * @dev Copies a substring into a new byte string.\n    * @param self The byte string to copy from.\n    * @param offset The offset to start copying at.\n    * @param len The number of bytes to copy.\n    */\n    function substring(bytes memory self, uint offset, uint len) internal pure returns(bytes memory) {\n        require(offset + len <= self.length);\n\n        bytes memory ret = new bytes(len);\n        uint dest;\n        uint src;\n\n        assembly {\n            dest := add(ret, 32)\n            src := add(add(self, 32), offset)\n        }\n        memcpy(dest, src, len);\n\n        return ret;\n    }\n\n    // Maps characters from 0x30 to 0x7A to their base32 values.\n    // 0xFF represents invalid characters in that range.\n    bytes constant base32HexTable = hex'00010203040506070809FFFFFFFFFFFFFF0A0B0C0D0E0F101112131415161718191A1B1C1D1E1FFFFFFFFFFFFFFFFFFFFF0A0B0C0D0E0F101112131415161718191A1B1C1D1E1F';\n\n    /**\n     * @dev Decodes unpadded base32 data of up to one word in length.\n     * @param self The data to decode.\n     * @param off Offset into the string to start at.\n     * @param len Number of characters to decode.\n     * @return The decoded data, left aligned.\n     */\n    function base32HexDecodeWord(bytes memory self, uint off, uint len) internal pure returns(bytes32) {\n        require(len <= 52);\n        uint8 decoded;\n        uint ret = 0;\n        for(uint i = 0; i < len; i++) {\n            byte char = self[off + i];\n            require(char >= 0x30 && char <= 0x7A);\n            decoded = uint8(base32HexTable[uint8(char) - 0x30]);\n            require(decoded <= 0x20);\n            if(i == len - 1) {\n                break;\n            }\n            ret = (ret << 5) | decoded;\n        }\n\n        uint bitlen = len * 5;\n        if(len % 8 == 0) {\n            // Multiple of 8 characters, no padding\n            ret = (ret << 5) | decoded;\n        } else if(len % 8 == 2) {\n            // Two extra characters - 1 byte\n            ret = (ret << 3) | (decoded >> 2);\n            bitlen -= 2;\n        } else if(len % 8 == 4) {\n            // Four extra characters - 2 bytes\n            ret = (ret << 1) | (decoded >> 4);\n            bitlen -= 4;\n        } else if(len % 8 == 5) {\n            // Five extra characters - 3 bytes\n            ret = (ret << 4) | (decoded >> 1);\n            bitlen -= 1;\n        } else if(len % 8 == 7) {\n            // Seven extra characters - 4 bytes\n            ret = (ret << 2) | (decoded >> 3);\n            bitlen -= 3;\n        } else {\n            revert();\n        }\n\n        return bytes32(ret << (256 - bitlen));\n    }\n}\n",
   "sourcePath": "solidity-bytes-utils/contracts/BytesUtils.sol",
   "ast": {
     "absolutePath": "solidity-bytes-utils/contracts/BytesUtils.sol",
@@ -23,7 +24,7 @@
           "solidity",
           "^",
           "0.5",
-          ".1"
+          ".2"
         ],
         "nodeType": "PragmaDirective",
         "src": "0:23:2"
@@ -226,7 +227,7 @@
                   "id": 790,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    ret := keccak256(add(add(self, 32), offset), len)\n}",
-                  "src": "455:88:2"
+                  "src": "455:82:2"
                 }
               ]
             },
@@ -945,7 +946,7 @@
                   "id": 848,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    selfptr := add(self, add(offset, 32))\n    otherptr := add(other, add(otheroffset, 32))\n}",
-                  "src": "1957:139:2"
+                  "src": "1957:127:2"
                 },
                 {
                   "body": {
@@ -1069,7 +1070,7 @@
                         "id": 866,
                         "nodeType": "InlineAssembly",
                         "operations": "{\n    a := mload(selfptr)\n    b := mload(otherptr)\n}",
-                        "src": "2193:112:2"
+                        "src": "2193:97:2"
                       },
                       {
                         "condition": {
@@ -4315,7 +4316,7 @@
                   "id": 1077,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    ret := and(mload(add(add(self, 1), idx)), 0xFF)\n}",
-                  "src": "5463:86:2"
+                  "src": "5463:80:2"
                 }
               ]
             },
@@ -4605,7 +4606,7 @@
                   "id": 1097,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    ret := and(mload(add(add(self, 2), idx)), 0xFFFF)\n}",
-                  "src": "5928:88:2"
+                  "src": "5928:82:2"
                 }
               ]
             },
@@ -4895,7 +4896,7 @@
                   "id": 1117,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    ret := and(mload(add(add(self, 4), idx)), 0xFFFFFFFF)\n}",
-                  "src": "6395:92:2"
+                  "src": "6395:86:2"
                 }
               ]
             },
@@ -5185,7 +5186,7 @@
                   "id": 1137,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    ret := mload(add(add(self, 32), idx))\n}",
-                  "src": "6843:76:2"
+                  "src": "6843:70:2"
                 }
               ]
             },
@@ -5475,7 +5476,7 @@
                   "id": 1157,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    ret := and(mload(add(add(self, 32), idx)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000)\n}",
-                  "src": "7275:149:2"
+                  "src": "7275:143:2"
                 }
               ]
             },
@@ -5824,20 +5825,20 @@
                 {
                   "externalReferences": [
                     {
-                      "ret": {
-                        "declaration": 1168,
-                        "isOffset": false,
-                        "isSlot": false,
-                        "src": "7939:3:2",
-                        "valueSize": 1
-                      }
-                    },
-                    {
                       "len": {
                         "declaration": 1165,
                         "isOffset": false,
                         "isSlot": false,
                         "src": "7916:3:2",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "ret": {
+                        "declaration": 1168,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "7939:3:2",
                         "valueSize": 1
                       }
                     },
@@ -5863,7 +5864,7 @@
                   "id": 1185,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    let mask := not(sub(exp(256, sub(32, len)), 1))\n    ret := and(mload(add(add(self, 32), idx)), mask)\n}",
-                  "src": "7856:148:2"
+                  "src": "7856:142:2"
                 }
               ]
             },
@@ -6033,8 +6034,8 @@
                         ],
                         "id": 1203,
                         "nodeType": "InlineAssembly",
-                        "operations": "{\n    mstore(dest, mload(src))\n}",
-                        "src": "8173:82:2"
+                        "operations": "{ mstore(dest, mload(src)) }",
+                        "src": "8173:65:2"
                       },
                       {
                         "expression": {
@@ -6474,7 +6475,7 @@
                   "id": 1225,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    let srcpart := and(mload(src), not(mask))\n    let destpart := and(mload(dest), mask)\n    mstore(dest, or(destpart, srcpart))\n}",
-                  "src": "8380:179:2"
+                  "src": "8380:173:2"
                 }
               ]
             },
@@ -6907,20 +6908,20 @@
                       }
                     },
                     {
-                      "src": {
-                        "declaration": 1258,
-                        "isOffset": false,
-                        "isSlot": false,
-                        "src": "9070:3:2",
-                        "valueSize": 1
-                      }
-                    },
-                    {
                       "ret": {
                         "declaration": 1248,
                         "isOffset": false,
                         "isSlot": false,
                         "src": "9049:3:2",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "src": {
+                        "declaration": 1258,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "9070:3:2",
                         "valueSize": 1
                       }
                     },
@@ -6946,7 +6947,7 @@
                   "id": 1260,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    dest := add(ret, 32)\n    src := add(add(self, 32), offset)\n}",
-                  "src": "9014:114:2"
+                  "src": "9014:99:2"
                 },
                 {
                   "expression": {
@@ -10355,7 +10356,7 @@
           "solidity",
           "^",
           "0.5",
-          ".1"
+          ".2"
         ],
         "nodeType": "PragmaDirective",
         "src": "0:23:2"
@@ -10558,7 +10559,7 @@
                   "id": 790,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    ret := keccak256(add(add(self, 32), offset), len)\n}",
-                  "src": "455:88:2"
+                  "src": "455:82:2"
                 }
               ]
             },
@@ -11277,7 +11278,7 @@
                   "id": 848,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    selfptr := add(self, add(offset, 32))\n    otherptr := add(other, add(otheroffset, 32))\n}",
-                  "src": "1957:139:2"
+                  "src": "1957:127:2"
                 },
                 {
                   "body": {
@@ -11401,7 +11402,7 @@
                         "id": 866,
                         "nodeType": "InlineAssembly",
                         "operations": "{\n    a := mload(selfptr)\n    b := mload(otherptr)\n}",
-                        "src": "2193:112:2"
+                        "src": "2193:97:2"
                       },
                       {
                         "condition": {
@@ -14647,7 +14648,7 @@
                   "id": 1077,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    ret := and(mload(add(add(self, 1), idx)), 0xFF)\n}",
-                  "src": "5463:86:2"
+                  "src": "5463:80:2"
                 }
               ]
             },
@@ -14937,7 +14938,7 @@
                   "id": 1097,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    ret := and(mload(add(add(self, 2), idx)), 0xFFFF)\n}",
-                  "src": "5928:88:2"
+                  "src": "5928:82:2"
                 }
               ]
             },
@@ -15227,7 +15228,7 @@
                   "id": 1117,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    ret := and(mload(add(add(self, 4), idx)), 0xFFFFFFFF)\n}",
-                  "src": "6395:92:2"
+                  "src": "6395:86:2"
                 }
               ]
             },
@@ -15517,7 +15518,7 @@
                   "id": 1137,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    ret := mload(add(add(self, 32), idx))\n}",
-                  "src": "6843:76:2"
+                  "src": "6843:70:2"
                 }
               ]
             },
@@ -15807,7 +15808,7 @@
                   "id": 1157,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    ret := and(mload(add(add(self, 32), idx)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000)\n}",
-                  "src": "7275:149:2"
+                  "src": "7275:143:2"
                 }
               ]
             },
@@ -16156,20 +16157,20 @@
                 {
                   "externalReferences": [
                     {
-                      "ret": {
-                        "declaration": 1168,
-                        "isOffset": false,
-                        "isSlot": false,
-                        "src": "7939:3:2",
-                        "valueSize": 1
-                      }
-                    },
-                    {
                       "len": {
                         "declaration": 1165,
                         "isOffset": false,
                         "isSlot": false,
                         "src": "7916:3:2",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "ret": {
+                        "declaration": 1168,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "7939:3:2",
                         "valueSize": 1
                       }
                     },
@@ -16195,7 +16196,7 @@
                   "id": 1185,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    let mask := not(sub(exp(256, sub(32, len)), 1))\n    ret := and(mload(add(add(self, 32), idx)), mask)\n}",
-                  "src": "7856:148:2"
+                  "src": "7856:142:2"
                 }
               ]
             },
@@ -16365,8 +16366,8 @@
                         ],
                         "id": 1203,
                         "nodeType": "InlineAssembly",
-                        "operations": "{\n    mstore(dest, mload(src))\n}",
-                        "src": "8173:82:2"
+                        "operations": "{ mstore(dest, mload(src)) }",
+                        "src": "8173:65:2"
                       },
                       {
                         "expression": {
@@ -16806,7 +16807,7 @@
                   "id": 1225,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    let srcpart := and(mload(src), not(mask))\n    let destpart := and(mload(dest), mask)\n    mstore(dest, or(destpart, srcpart))\n}",
-                  "src": "8380:179:2"
+                  "src": "8380:173:2"
                 }
               ]
             },
@@ -17239,20 +17240,20 @@
                       }
                     },
                     {
-                      "src": {
-                        "declaration": 1258,
-                        "isOffset": false,
-                        "isSlot": false,
-                        "src": "9070:3:2",
-                        "valueSize": 1
-                      }
-                    },
-                    {
                       "ret": {
                         "declaration": 1248,
                         "isOffset": false,
                         "isSlot": false,
                         "src": "9049:3:2",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "src": {
+                        "declaration": 1258,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "9070:3:2",
                         "valueSize": 1
                       }
                     },
@@ -17278,7 +17279,7 @@
                   "id": 1260,
                   "nodeType": "InlineAssembly",
                   "operations": "{\n    dest := add(ret, 32)\n    src := add(add(self, 32), offset)\n}",
-                  "src": "9014:114:2"
+                  "src": "9014:99:2"
                 },
                 {
                   "expression": {
@@ -20673,11 +20674,11 @@
   },
   "compiler": {
     "name": "solc",
-    "version": "0.5.2+commit.1df8f40c.Emscripten.clang"
+    "version": "0.5.16+commit.9c3226ce.Emscripten.clang"
   },
   "networks": {},
-  "schemaVersion": "3.0.1",
-  "updatedAt": "2019-01-27T00:18:23.844Z",
+  "schemaVersion": "3.3.2",
+  "updatedAt": "2020-11-15T23:30:05.188Z",
   "devdoc": {
     "methods": {}
   },

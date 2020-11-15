@@ -6,6 +6,8 @@
     "test": "test"
   },
   "scripts": {
+    "compile": "truffle compile",
+    "migrate": "truffle migrate",
     "test": "truffle test"
   },
   "repository": {
@@ -24,7 +26,7 @@
   },
   "homepage": "https://github.com/JonahGroendal/asn1-decode#readme",
   "devDependencies": {
-    "truffle": "^5.0.0-beta.1"
+    "truffle": "^5.1.53"
   },
   "dependencies": {
     "solidity-bytes-utils": "github:JonahGroendal/solidity-bytes-utils"

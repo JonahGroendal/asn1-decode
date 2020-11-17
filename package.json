@@ -29,6 +29,6 @@
     "truffle": "^5.1.53"
   },
   "dependencies": {
-    "solidity-bytes-utils": "github:JonahGroendal/solidity-bytes-utils"
+    "@ensdomains/dnssec-oracle": "github:JonahGroendal/dnssec-oracle"
   }
 }

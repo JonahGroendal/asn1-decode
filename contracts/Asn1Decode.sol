@@ -1,6 +1,6 @@
 pragma solidity  ^0.5.2;
 
-import "solidity-bytes-utils/contracts/BytesUtils.sol";
+import "@ensdomains/dnssec-oracle/contracts/BytesUtils.sol";
 
 library NodePtr {
   // Unpack first byte index

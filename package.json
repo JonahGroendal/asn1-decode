@@ -26,7 +26,7 @@
   },
   "homepage": "https://github.com/JonahGroendal/asn1-decode#readme",
   "devDependencies": {
-    "truffle": "^5.1.53"
+    "truffle": "^5.7.1"
   },
   "dependencies": {
     "@ensdomains/dnssec-oracle": "github:JonahGroendal/dnssec-oracle"
